@@ -13,9 +13,13 @@ type Producer struct {
 
 func NewProducer(brokers []string, topic string) *Producer {
 	writer := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:      brokers,
-		Topic:        topic,
-		BatchTimeout: time.Millisecond * 100,
+		Brokers:          brokers,
+		Topic:            topic,
+		Async:            true,
+		BatchSize:        100,
+		RequiredAcks:     int(kafka.RequireOne),
+		BatchTimeout:     time.Millisecond,
+		CompressionCodec: kafka.Compression.Codec(kafka.Lz4),
 	})
 
 	return &Producer{

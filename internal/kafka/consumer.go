@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"time"
 
 	kafka "github.com/segmentio/kafka-go"
 )
@@ -15,6 +16,7 @@ func NewConsumer(brokers []string, topic, groupID string) *Consumer {
 		Brokers:  brokers,
 		Topic:    topic,
 		GroupID:  groupID,
+		MaxWait:  100 * time.Millisecond,
 		MinBytes: 10e3, //  min 10kb
 		MaxBytes: 10e6, // max 10mb
 	})

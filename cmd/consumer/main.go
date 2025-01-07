@@ -8,8 +8,8 @@ import (
 
 func main() {
 	brokers := []string{"localhost:9092"}
-	topic := "test_topic"
-	groupID := "test_group"
+	topic := "message"
+	groupID := "messages"
 
 	consumer := kafka.NewConsumer(brokers, topic, groupID)
 	defer consumer.Close()
@@ -25,4 +25,5 @@ func main() {
 
 		log.Printf("Continue Message : key=%s   value=%s", key, value)
 	}
+
 }
