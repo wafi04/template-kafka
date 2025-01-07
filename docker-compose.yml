@@ -1,49 +1,28 @@
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest #image untuk zookeeper
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181 #port untuk client connection
-      ZOOKEEPER_TICK_TIME: 2000 #interval waktu untuk tick
-    ports:
-      - "2181:2181" #port mapping host:container
-    networks:
-      - kafka-network
-
   kafka:
-    #  image untuk kafka
-    image: confluentinc/cp-kafka:latest
+    image: bitnami/kafka:3.7.1
     container_name: kafka
-    depends_on:
-      - zookeeper #inject container zookeeper
+    hostname: kafka
     ports:
-      - "9092:9092"
+      - 9902:9902
+    volumes:
+      - ./dockervol1/kafka:/bitnami/kafka
     environment:
-      KAFKA_BROKER_ID: 1 # ID unik untuk broker
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181 # Koneksi ke Zookeeper
-      # Konfigurasi listeners untuk komunikasi internal dan external
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:29092,PLAINTEXT_HOST://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1 # Faktor replikasi
-    networks:
-      - kafka-network
-
+      - TZ=Asia/Jakarta
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka:9093
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:19092,PLAINTEXT_HOST://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:19092,PLAINTEXT_HOST://localhost:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=PLAINTEXT
   kafka-ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:v0.7.2
     container_name: kafka-ui
-    depends_on:
-      - kafka
     ports:
-      - "8080:8080"
+      - 8080:8080
     environment:
+      TZ: Asia/Jakarta
       KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-    networks:
-      - kafka-network
-
-networks:
-  kafka-network:
-    driver: bridge
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:19092
