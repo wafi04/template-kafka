@@ -1,71 +1,52 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"golang-kafka/internal/kafka"
+	"golang-kafka/internal/order"
 	"log"
 	"os"
-	"strings"
-	"time"
+	"os/signal"
+	"syscall"
 )
 
 func main() {
 	brokers := []string{"localhost:9092"}
-	topic := "order"
+	topic := "orders"
 
-	// Inisialisasi producer
+	// Menggunakan producer yang sudah dikonfigurasi
 	producer := kafka.NewProducer(brokers, topic)
 	defer producer.Close()
 
-	ctx := context.Background()
-	reader := bufio.NewReader(os.Stdin)
+	// Membuat simulator dengan producer yang sudah dikonfigurasi
+	simulator := order.NewSimulator(producer)
 
-	fmt.Println("Kafka Producer dimulai. Ketik 'quit' untuk keluar.")
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
+	// Handle graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+
+	// Start  simulator in goroutines
 	errChan := make(chan error, 1)
-	go handleErrors(errChan)
+	go func() {
+		errChan <- simulator.Start(ctx)
+	}()
 
-	for {
-		// Baca input
-		fmt.Print("Masukkan pesan: ")
-		message, err := reader.ReadString('\n')
+	fmt.Println("Order simulator started. Press Ctrl+C to exit.")
+
+	// Wait for error or shutdown signal
+	select {
+	case err := <-errChan:
 		if err != nil {
-			log.Printf("Error membaca input: %v\n", err)
-			continue
+			log.Printf("Error in simulator: %v\n", err)
 		}
-
-		message = strings.TrimSpace(message)
-
-		// Periksa kondisi keluar
-		if message == "quit" || message == "" {
-			break
-		}
-
-		// Generate key dan value
-		key := generateMessageKey()
-		value := []byte(message)
-
-		// Kirim pesan secara asynchronous
-		go func(k, v []byte) {
-			if err := producer.Produce(ctx, k, v); err != nil {
-				errChan <- fmt.Errorf("gagal mengirim pesan: %v", err)
-				return
-			}
-			log.Printf("Pesan terkirim: key=%s value=%s\n", k, v)
-		}(key, value)
+	case <-sigChan:
+		fmt.Println("\nReceived shutdown signal")
+		cancel()
 	}
-}
 
-// generateMessageKey menghasilkan key unik untuk setiap pesan
-func generateMessageKey() []byte {
-	return []byte(fmt.Sprintf("key-%d-%d", time.Now().Unix(), time.Now().Nanosecond()))
-}
-
-// handleErrors menangani error secara asynchronous
-func handleErrors(errChan <-chan error) {
-	for err := range errChan {
-		log.Printf("Error: %v\n", err)
-	}
+	fmt.Println("Shutting down simulator...")
 }

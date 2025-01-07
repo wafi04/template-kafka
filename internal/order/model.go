@@ -1,3 +1,4 @@
+// internal/order/model.go
 package order
 
 import "time"
@@ -17,10 +18,3 @@ type Analytics struct {
 	ProductCounts map[string]int  `json:"product_counts"`
 	HourlyRevenue map[int]float64 `json:"hourly_revenue"`
 }
-
-const (
-	StatusPending   = "pending"
-	StatusPaid      = "paid"
-	StatusShipped   = "shipped"
-	StatusDelivered = "delivered"
-)
